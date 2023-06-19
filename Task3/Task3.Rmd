@@ -1,0 +1,295 @@
+---
+title: "Task 3. Exploratory analysis - Retail"
+output:
+  html_document: default
+---
+
+#### Try to find weak areas where you can make more profit.
+
+#### What business problems can you derive by exploring the data?
+<br>
+
+## Download packages/libraries
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(magrittr)
+```
+<br>
+
+## Download data
+
+```{r}
+retail <- read.csv("/Users/macbookair/Desktop/GRIP/Task3/SampleSuperstore.csv")
+summary(retail)
+```
+<br>
+
+## 1. Data cleaning and preparation
+
+### 1.1 Check missing values
+
+```{r}
+retail.na <- is.na(retail)
+summary(retail.na)
+```
+<br>
+
+### 1.2 Check duplicated values
+
+```{r}
+duplicated.retail <- duplicated(retail)
+head(duplicated.retail)
+```
+
+There are 17 cases of duplicated values.
+<br>
+<br>
+
+### 1.3 Drop duplicated values
+
+```{r}
+retail.unique <- retail[!duplicated(retail), ]
+```
+<br>
+
+### 1.4 Remove the country and postal code columns
+
+```{r}
+retail.unique <- retail.unique %>% select(-c(Country, Postal.Code))
+```
+<br>
+<br>
+
+## 2. Exploratory data analysis (EDA)
+
+### 2.1 Shipment mode analysis
+
+```{r}
+ggplot(retail.unique, aes(Ship.Mode, fill = Ship.Mode)) +
+  geom_bar()+
+  ggtitle("Frequency of purchases by Shipment Mode")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+Standard class in the most frequent shipping method.
+<br>
+<br>
+
+```{r}
+ggplot(retail.unique, aes(Ship.Mode, Sales, fill = Ship.Mode)) +
+  geom_col() +
+  ggtitle("Sales by the Shipment Mode")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+Standard class generates most sales, followed by second and first classes.
+<br>
+<br>
+
+### 2.2 Segment analysis
+
+```{r}
+ggplot(retail.unique, aes(Segment, fill = Segment)) +
+  geom_bar()+
+  ggtitle("Frequency of purchases by Segment")
+```
+
+Consumer is the most frequent segment, followed by corporate and home office.
+
+Home office segment is the weak area, let's look if sales-wise it is the same.
+<br>
+<br>
+
+```{r}
+ggplot(retail.unique,aes(Segment,Sales, fill = Segment)) +
+  geom_col()+
+  ggtitle("Segmentwise Sales")
+```
+
+Although region-wise, Consumer segment sales only predominate in the West. Central region is dominated by Corporate segment, East and South by Home Office.
+
+When approaching Segment-wise sales, focus on the region.<br>
+<br>
+<br>
+
+### 2.3 City analysis
+
+Identify cities with most frequent sales.
+
+```{r}
+city_freq <- table(retail.unique$City)
+sorted_freq <- sort(city_freq, decreasing = TRUE)
+top_cities <- names(head(sorted_freq, 10))
+print(top_cities)
+```
+
+New York City, LA, Philadelphia, San Francisco, Seattle, Houston, Chicago, Columbus, San Diego and Springfield are the top cities sales-wise.<br>
+<br>
+<br>
+
+### 2.4 State analysis
+
+Calculate the frequency of each state
+
+```{r}
+state_frequency <- count(retail.unique, State)
+```
+<br>
+
+Reorder the levels of the State factor based on the frequency of Sales
+
+```{r}
+retail.unique$State <- factor(retail.unique$State, levels = state_frequency$State[order(state_frequency$n)])
+```
+<br>
+```{r}
+ggplot(retail.unique, aes(State, fill = State)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, margin = margin(15, 0, 15, 0)), 
+        legend.position = "none")+
+  xlab("State") +
+  ylab("Sales") +
+  ggtitle("Sales by State")
+```
+
+California, New York and Texas are top three states sales-wise. Weak points are Wyoming, West Virginia and North Dakota. Cannot conclude a relationship between most profitable states and regions, as all of these are located in different parts of the country. <br>
+<br>
+<br>
+
+### 2.5 Region analysis
+
+```{r}
+ggplot(retail.unique, aes(Region, fill = Region))+
+  geom_bar()+
+  ggtitle("Frequency of purchases by the Region")
+```
+
+Most frequent purchases in West, followed by East and Central. Least purchases in the South - a potential weak point.<br>
+<br>
+<br>
+
+```{r}
+ggplot(retail.unique, aes(Region, Sales, fill = Region))+
+  geom_col()+
+  ggtitle("Sales by the Region")
+```
+
+Same pattern as above.
+<br>
+<br>
+```{r}
+ggplot(retail.unique, aes(Region, Profit, fill = Region))+
+  geom_violin()+
+  ggtitle("Profit by the Region")
+```
+
+East shows to be losing the most, whereas Central region seems to be generating most profit.
+<br>
+<br>
+
+### 2.6 Category analysis
+
+```{r}
+ggplot(retail.unique,aes(Category,Sales, fill = Category))+
+  geom_col()+
+  ggtitle("Category-wise Sales")
+```
+
+Office supplies generate least sales...
+<br>
+<br>
+
+```{r}
+ggplot(retail.unique, aes(Category, fill = Category)) +
+  geom_bar()+
+  ggtitle("Frequency of purchases by the Category")
+```
+
+Even though it is the most frequently purchased category!
+<br>
+<br>
+
+### 2.7 Sub category analysis
+
+```{r}
+ggplot(retail.unique, aes(Sub.Category, fill = Sub.Category)) +
+  geom_bar()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  ggtitle("Frequency of purchases by the Sub category")
+```
+
+Binders, paper, furnishings, phones and storage are the top 5 purchased items.
+<br>
+<br>
+
+Let's look at sales within sub categories.
+
+```{r}
+ggplot(retail.unique,aes(Sub.Category,Sales, fill = Sub.Category))+
+  geom_col()+
+  ggtitle("Sub categorywise Sales")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+Chairs and phones generate most sales, while fasteners, labels, art generate least sales.
+<br>
+<br>
+
+### 2.8 Sales analysis
+
+```{r}
+ggplot(retail.unique, aes(Sales)) +
+  geom_boxplot()
+```
+
+Sales has some abnormally high value.
+<br>
+<br>
+
+Replace that value with an average sales value.
+
+```{r}
+maxSales <- max(retail.unique$Sales)
+retail.unique$Sales <- replace(retail.unique$Sales, retail.unique$Sales==maxSales, mean(retail.unique$Sales))
+summary(retail.unique$Sales)
+```
+<br>
+
+### 2.9 Quantity analysis
+
+```{r}
+ggplot(retail.unique, aes(Quantity, fill = "pink"))+
+  geom_bar()+
+  scale_x_continuous(breaks = seq(0, max(retail.unique$Quantity), by = 1))+
+  theme_bw()+
+  ggtitle("Frequency of purchases by Quantity of items")+
+  theme(legend.position = "none")
+```
+
+Customers tend to buy things in pairs or threes.
+<br>
+<br>
+
+### 2.10 Discount analysis
+
+```{r}
+ggplot(retail.unique, aes(Discount, Sales, fill = Discount))+
+  geom_col()+
+  ggtitle("Sales by the Discount")
+```
+
+Most sales were made when no discount was applied or when 20% was applied.
+<br>
+<br>
+
+```{r}
+ggplot(retail.unique, aes(Discount, Profit, fill = Discount))+
+  geom_col()+
+  ggtitle("Profit by the Discount")
+```
+
+Losing profit on heavily discounted items.
